@@ -3,93 +3,89 @@ import java.util.*;
 public class Autocomplete {
 
 //    declare a root TrieNode for autocomplete
-    private TrieNode root;
-    private LinkedHashMap<Long, GraphDB.Node> nodes;
+    private TrieNode root = new TrieNode();
 
     /**
      * create TrieNode class
      */
-    static class TrieNode {
-        TrieNode[] children = new TrieNode[27];
-        boolean end;
-        String value;
-        LinkedList<Long> ids;
+    class TrieNode {
+        TrieNode[] links;
+        boolean exist;
 
         TrieNode() {
-            end = false;
-            for(int i = 0; i < children.length; i++) {
-                children[i] = null;
-            }
-            value = null;
-            ids = new LinkedList<>();
+            links = new TrieNode[128];
+            exist = false;
         }
     }
 
     public Autocomplete(LinkedHashMap<Long, GraphDB.Node> nodes) {
-        this.nodes = nodes;
-        buildTrie();
+        init(nodes);
     }
 
-    private void buildTrie() {
-        root = new TrieNode();
-        Set<Long> keys = nodes.keySet();
-        Iterator<Long> itr = keys.iterator();
-        int cnt = 0;
-        while(itr.hasNext()) {
-            cnt++;
-            long key = itr.next();
-            if(nodes.get(key).getName() != null) {
-                addTrieLocation(root, nodes.get(key).getName(), nodes.get(key).getID());
-                System.out.println("the name is " + nodes.get(key).getName());
+//    put all names in nodes into the trie
+    public void init(LinkedHashMap<Long, GraphDB.Node> nodes) {
+        for(GraphDB.Node toPut : nodes.values()) {
+            if(toPut.getName() != null) {
+                put(GraphDB.cleanString(toPut.getName()));
             }
         }
-        System.out.println("the total number is " + cnt);
     }
 
-    private void addTrieLocation(TrieNode root, String name, long id) {
-        String cleaned = GraphDB.cleanString(name);
-        TrieNode pointer = root;
-        for(int i = 0; i < cleaned.length(); i++) {
-            int index = cleaned.charAt(i) - 'a' >= 0 ? cleaned.charAt(i) - 'a': 26;
-            //System.out.println(cleaned.charAt(i) + "and " + index);
-            if(pointer.children[index] == null) {
-                pointer.children[index]= new TrieNode();
-            }
-            pointer = pointer.children[index];
+//    for test: put a list of names into the trie
+    public void init(String[] names) {
+        for(String name : names) {
+            put(name);
+//            System.out.println("name "+ name + " has been put");
         }
-        pointer.end = true;
-        pointer.value = name;
-        pointer.ids.add(id);
     }
 
-    public List<Map<String, Object>> getLocationNodes(String location) {
-        List<Map<String, Object>> result = new LinkedList<>();
-        String cleanedLocation = GraphDB.cleanString(location);
-        TrieNode pointer = root;
 
-        for(int i = 0; i < cleanedLocation.length(); i++) {
-            int index = cleanedLocation.charAt(i) - 'a' >= 0 ? cleanedLocation.charAt(i) - 'a' : 26;
-            if(pointer.children[index] == null) {
-                System.out.println("no matching prefix");
-                return null;
+//    put a name into a trie
+    private void put(String name) {
+        put(root, name, 0);
+    }
+
+//    helper class: put one character of the name into a trie recursively
+//    until the whole name is put.
+    private TrieNode put(TrieNode current, String name, int p) {
+        if(current == null) {
+            current = new TrieNode();
+        }
+
+        if(p == name.length()) {
+            current.exist = true;
+            return current;
+        }
+
+        char character = name.charAt(p);
+        current.links[character] = put(current.links[character], name, p + 1);
+        return current;
+    }
+
+    public List<String> getNameByPrefix(String prefix) {
+        ArrayList<String> result = new ArrayList<>();
+        TrieNode search = root;
+        char[] pre = prefix.toCharArray();
+        for (char i : pre) {
+            if (search.links[i] != null) {
+                search = search.links[i];
+            } else {
+                return result;
             }
-            pointer = pointer.children[index];
         }
-        for (long curid : pointer.ids) {
-            GraphDB.Node temp = nodes.get(curid);
-            Map<String, Object> current = new LinkedHashMap<>();
-            current.put("lat", temp.getLat());
-            current.put("lon", temp.getLon());
-            current.put("name", temp.getName());
-            current.put("id", temp.getID());
-            result.add(current);
-            System.out.println("get the location: " + temp.getName());
-        }
+        addNameByPrefix(search,prefix,result);
         return result;
     }
 
-    public TrieNode getRoot() {
-        return root;
-    }
+    private void addNameByPrefix(TrieNode search,String prefix, List<String> result) {
 
+        if(search.exist == true) {
+            result.add(prefix);
+        }
+        for(int i = 0; i < 128; i++) {
+            if(search.links[i] != null) {
+                addNameByPrefix(search.links[i], prefix + (char)i, result);
+            }
+        }
+    }
 }

@@ -4,12 +4,7 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.io.IOException;
@@ -91,7 +86,7 @@ public class MapServer {
     public static void initialize() {
         graph = new GraphDB(OSM_DB_PATH);
         rasterer = new Rasterer();
-        auto = new Autocomplete(graph.getNodes());
+        auto = new Autocomplete(graph.getTotalNodes());
     }
 
     public static void main(String[] args) {
@@ -286,39 +281,7 @@ public class MapServer {
      * cleaned <code>prefix</code>.
      */
     public static List<String> getLocationsByPrefix(String prefix) {
-        List<String> result = new LinkedList<>();
-        Autocomplete.TrieNode root = auto.getRoot();
-        System.out.println("success");
-        if(root == null)
-            System.out.println("root is null!");
-        Autocomplete.TrieNode pointer = root;
-        String cleanedPrefix = GraphDB.cleanString(prefix);
-
-        for(int i = 0; i < cleanedPrefix.length(); i++) {
-            int index = cleanedPrefix.charAt(i) - 'a' >= 0 ? cleanedPrefix.charAt(i) - 'a' : 26;
-            if(pointer.children[index] == null) {
-                System.out.println("no matching prefix");
-                return null;
-            }
-            pointer = pointer.children[index];
-        }
-        helperPrefix(result, pointer);
-        return result;
-    }
-
-    /**
-     * helper method
-     * @param result
-     * @param current
-     */
-    public static void helperPrefix(List<String> result, Autocomplete.TrieNode current) {
-        if(current.end == true)
-            result.add(current.value);
-        for(int i = 0; i < current.children.length; i++) {
-            if(current.children[i] != null)
-                helperPrefix(result, current.children[i]);
-        }
-        System.out.println("filled name is" + current.value);
+        return auto.getNameByPrefix(GraphDB.cleanString(prefix));
     }
 
     /**
@@ -334,7 +297,20 @@ public class MapServer {
      * "id" : Number, The id of the node. <br>
      */
     public static List<Map<String, Object>> getLocations(String locationName) {
-        return auto.getLocationNodes(locationName);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for(GraphDB.Node loc : graph.getTotalNodes().values()) {
+            if(loc.getName()!= null) {
+                if (GraphDB.cleanString(locationName).equals(GraphDB.cleanString(loc.getName()))) {
+                    HashMap<String, Object> temp = new HashMap<>();
+                    temp.put("lat", loc.getLat());
+                    temp.put("lon", loc.getLon());
+                    temp.put("name", loc.getName());
+                    temp.put("id", loc.getID());
+                    result.add(temp);
+                }
+            }
+        }
+        return result;
     }
 
     /**

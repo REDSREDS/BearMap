@@ -80,6 +80,7 @@ public class GraphDB {
         }
 
         public void addAdjNode(long adj) {
+            this.setConnectedT();
             adjNodes.add(adj);
         }
 
@@ -184,8 +185,6 @@ public class GraphDB {
             Node post = nodes.get(postID);
             pre.addAdjNode(postID);
             post.addAdjNode(preID);
-            pre.setConnectedT();
-            post.setConnectedT();
             pathName.put(preID + "to" + postID, way.getName());
             pathName.put(postID + "to" + preID, way.getName());
             preID = postID;
@@ -362,6 +361,10 @@ public class GraphDB {
      */
     public LinkedHashMap<Long, Node> getNodes() {
         return nodes;
+    }
+
+    public LinkedHashMap<Long, Node> getTotalNodes() {
+        return totalNodes;
     }
 
 

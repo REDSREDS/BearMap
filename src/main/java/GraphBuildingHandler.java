@@ -77,10 +77,9 @@ public class GraphBuildingHandler extends DefaultHandler {
             double lon = Double.parseDouble(attributes.getValue("lon"));
             double lat = Double.parseDouble(attributes.getValue("lat"));
             lastNode= new GraphDB.Node(id, lon, lat);
-            g.insertNode(id, lastNode);
+
         } else if(activeState.equals("node") && qName.equals("tag") && attributes.getValue("k").equals("name")) {
             lastNode.setName(attributes.getValue("v"));
-            System.out.println(attributes.getValue("v"));
         } else if (qName.equals("way")) {
             /* We encountered a new <way...> tag. */
             activeState = "way";
@@ -122,10 +121,16 @@ public class GraphBuildingHandler extends DefaultHandler {
      */
     @Override
     public void endElement(String uri, String localName, String qName) throws SAXException {
+        if(qName.equals("node")) {
+            g.insertNode(lastNode.getID(), lastNode);
+            activeState = "";
+        }
         if (qName.equals("way")) {
             if(lastWay.getValid())
                 g.buildPath(lastWay);
+            activeState = "";
         }
+
     }
 
     public boolean valid(String highway) {
